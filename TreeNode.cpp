@@ -15,14 +15,16 @@ TreeNode::TreeNode() {
 
 
 int TreeNode::addData(KeyType keytype,char *key, int payloadlen,char *payload,int position){
+	int numPointers = this->numkeys;
 	for(int j = numkeys-1; j >= (position); j--) {
 		strncpy(&(data[(j+1)*keylen(&keytype)]), &(data[j*keylen(&keytype)]),keylen(&keytype));
 	}
 	strncpy(&(data[(position)*keylen(&keytype)]),key, keylen(&keytype));
 	if (this->flag!= 'c') {
 		position += 1;
+		numPointers ++;
 	}
-	for(int j = (DATA_SIZE-numkeys*payloadlen); j < (DATA_SIZE-position*payloadlen); j+=payloadlen) {
+	for(int j = (DATA_SIZE-numPointers*payloadlen); j < (DATA_SIZE-position*payloadlen); j+=payloadlen) {
 			strncpy(&(data[j-payloadlen]), &(data[j]),payloadlen);
 	}
 	strncpy(&(data[DATA_SIZE-(position+1)*payloadlen]),payload,payloadlen);

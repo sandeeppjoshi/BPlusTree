@@ -171,7 +171,6 @@ public:
 		char *nextNodeAddress;
 		nextNodeAddress = (char *)malloc(NODE_OFFSET_SIZE);
 		node->getPayload(NODE_OFFSET_SIZE,nextNodeAddress,position);
-//		********FREE PREVIOUS NODE HERE
 		loadNode(*rcvd_node,nextNodeAddress);
 		return 0;
 	}
@@ -189,9 +188,7 @@ public:
 			TreeNode *newLeaf = new TreeNode();
 			int tempSpaceSize = DATA_SIZE+payloadlen+keylen(&keytype);
 			char *tempSpace = (char*)calloc(tempSpaceSize,sizeof(char));
-//			char tempSpace[130];
-//			for(int i = 0 ; i < 130 ; i++)
-//				tempSpace[i] = '\0';
+
 			utils->copyBytes(tempSpace,node->data,(node->numkeys)*keylen(&keytype));
 			utils->copyBytes(&tempSpace[tempSpaceSize-(node->numkeys)*payloadlen],&(node->data[DATA_SIZE-(node->numkeys)*payloadlen]),(node->numkeys)*payloadlen);
 			for(int j = node->numkeys-1; j >= (position); j--) {
@@ -291,13 +288,7 @@ public:
 				numPointers++;
 			int tempSpaceSize = DATA_SIZE+payloadlen+keylen(&keytype);
 			char *tempSpace =(char *)calloc(tempSpaceSize,sizeof(char));
-//			char tempSpace[130];
-//			for ( int k = 0 ; k < 130; k ++)
-//				tempSpace[k] = '\0';
 			utils->copyBytes(tempSpace,parent->data,(parent->numkeys)*keylen(&keytype));
-//			if(parent->flag != 'c')
-//				utils->copyBytes(&tempSpace[tempSpaceSize-(parent->numkeys+1)*NODE_OFFSET_SIZE],&(parent->data[DATA_SIZE-(parent->numkeys+1)*NODE_OFFSET_SIZE]),(parent->numkeys+1)*NODE_OFFSET_SIZE);
-//			else
 			utils->copyBytes(&tempSpace[tempSpaceSize-(numPointers)*NODE_OFFSET_SIZE],&(parent->data[DATA_SIZE-(numPointers)*NODE_OFFSET_SIZE]),(numPointers)*NODE_OFFSET_SIZE);
 			for(int j = parent->numkeys-1; j >= (i); j--) {
 					utils->copyBytes(&(tempSpace[(j+1)*keylen(&keytype)]), &(tempSpace[j*keylen(&keytype)]),keylen(&keytype));
@@ -340,7 +331,6 @@ public:
 						loadNode(grandParent,accessPath[i-1]);
 			char* nextKey =(char *) malloc(keylen(&keytype));
 			utils->copyBytes(nextKey,&(tempSpace[(n_by_two*keylen(&keytype))]),keylen(&keytype));
-//			newNonLeaf->getKey(keytype,nextKey,0);
 			storeNode(newNonLeaf,-1);
 			storeNode(parent,utils->getIntForBytes(parent->myaddr));
 			char left[NODE_OFFSET_SIZE];
@@ -362,7 +352,10 @@ public:
 		if(type == 'c')
 			allowedKeys = (DATA_SIZE)/((keylen(&keytype)+payloadlen)+NODE_OFFSET_SIZE);
 		else
+		{
 			allowedKeys = (DATA_SIZE)/((keylen(&keytype)+NODE_OFFSET_SIZE)+NODE_OFFSET_SIZE);
+//			allowedKeys --;
+		}
 		if(numkeys > allowedKeys)
 			return 1;
 		return 0;
@@ -405,19 +398,21 @@ public:
 int main(){
 	KeyType keyType;
 	keyType.numAttrs=1;
-	keyType.attrTypes[0]=intType;
+	keyType.attrTypes[0]=stringType;
 	keyType.attrLen[0]=8;
-	char *filename = "/home/sandeep/work/cs631/BPlusTree/indexComp.ind";
+	char *filename = "/home/sandeep/work/cs631/BPlusTree/indexomp1.ind";
 	srand(1);
-	class Index *index = new Index(filename,&keyType,20);
+	class Index *index = new Index(filename);
+//	class Index *index = new Index(filename,&keyType,20);
 	char *keyN = (char *)calloc(8,1);
 	char payL[20];
 	int a;
 	Utils *utils  = new Utils();
-	for( int i = 0 ; i < 200 ; i++)
+	int i;
+	for(i = 0 ; i < 10000 ; i++)
 	{
 //		sprintf(keyN,"%d",rand()%20);
-		a = rand()%20;
+		a = rand()%2000;
 
 //		char *str = utils->getBytesForInt(rand()%20);
 		printf("\n %d",a);
@@ -427,21 +422,33 @@ int main(){
 		strcat(payL,"-ptr");
 		index->insert(keyN,payL);
 	}
+	printf("CHECK ME++++   %d",i);
 	delete(index);
 //	int a;
 //	int found;
 //	srand(1);
 //	class Index *index = new Index(filename);
-//	for ( int i = 0 ; i < 4 ; i++){
-//		utils->copyBytes(keyN,utils->getBytesForInt(rand()%20),8);
+//	for ( int i = 0 ; i < 200 ; i++){
+//		utils->copyBytes(keyN,utils->getBytesForInt(rand()%30),8);
 //		found = index->lookup(keyN,payL);
 //		printf("\n %d ==== %d",i,found);
 //	}
 //
 //	index->insert("3","3-ptr");
-//	index->insert("6","6-ptr");
 //	index->insert("17","17-ptr");
+//	index->insert("6","6-ptr");
+//	index->insert("6","6-ptr");
+//	index->insert("61","6-ptr");
 //	index->insert("5","ankur");
+//	index->insert("53","ankur");
+//	index->insert("62","6-ptr");
+//	index->insert("67","6-ptr");
+//	index->insert("17","17-ptr");
+//	index->insert("173","17-ptr");
+//	index->insert("5","ankur");
+//	index->insert("52","ankur");
+//	index->insert("171","17-ptr");
+//	index->insert("174","17-ptr");
 //	index->insert("33","swapnil");
 //	index->insert("23","meme");
 //	delete(index);
@@ -452,12 +459,15 @@ int main(){
 //	index->insert("46","46");
 
 //	char answer[60];
-//	index->lookup("2",answer);
+//	index->lookup("62",answer);
 //	printf("Found!! %s",answer);
-//	index->lookup("33",answer);
+//	index->lookup("53",answer);
 //	printf("Found!! %s",answer);
-//	index->lookup("45",answer);
+//	index->lookup("174",answer);
 //	printf("Found!! %s",answer);
-
+//	index->lookup("0",answer);
+//	printf("Found!! %s",answer);
+//	index->lookup("1746",answer);
+//	printf("Found!! %s",answer);
 	return 0;
 }

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #define MaxAttrs 16
 #define MAX_TREE_HEIGHT 16
-#define BLOCK_SIZE 100
+#define BLOCK_SIZE 512
 #define NODE_OFFSET_SIZE 8
 #define NODE_HEADER_LENGTH (NODE_OFFSET_SIZE+1+4)
 #define DATA_SIZE BLOCK_SIZE-NODE_HEADER_LENGTH
