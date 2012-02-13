@@ -1,3 +1,11 @@
+/*
+ * BPlus Tree Code
+ * Sandeep Joshi 113050022
+ * Nikhil Patil 113059004
+ * github: git://github.com/nikpatil/BPlusTree.git  or git://github.com/sandeeppjoshi/BPlusTree.git
+ *
+ */
+
 #include "TreeNode.h"
 #include "FileHandler.h"
 #include "Utils.h"
@@ -9,7 +17,13 @@ int keylen(KeyType *keytype){
 	}
 	return len;
 }
-
+/*----------------------------------------------------------------------------------------------------------------------------
+ * Index class contains main functions like lookup and insert.
+ * Data Representation:
+ * Node contains keys and payload arranged as follows:
+ * Header,keys,payload
+ * Keys and payload is arraged such that there is free space in the middle.This is done to avoid extra shifting.
+ */
 
 class Index{
 public:
@@ -25,7 +39,9 @@ public:
 	~Index(){
 
 	}
-
+/*
+ *Construnctor for new Index
+ */
 	Index(char* indexName, KeyType *keytype, int payloadlen){
 		utils = new Utils();
 		fHandler = new FileHandler(indexName);
@@ -40,6 +56,23 @@ public:
 		utils->copyBytes(&header[NODE_OFFSET_SIZE+sizeof(payloadlen)],utils->getBytesForKeyType(this->keytype),sizeof(KeyType));
 	}
 
+	/*
+	 * Constructor to load already existing index
+	 */
+	Index(char* indexName){
+		fHandler = new FileHandler(indexName,'o');
+		header = (char *)malloc(BLOCK_SIZE);
+		fHandler->readBlock(0,header);
+		utils = new Utils();
+		utils->copyBytes(rootAddress,header,NODE_OFFSET_SIZE);
+		root = new TreeNode();
+		loadNode(root,rootAddress);
+		payloadlen= utils->getIntForBytes(&header[NODE_OFFSET_SIZE]);
+		keytype = utils->getKeyTypeForBytes(&header[NODE_OFFSET_SIZE+sizeof(payloadlen)]);
+	}
+/*
+ * Compare function. Takes care of composite keys
+ */
 	//returns -1 if first value is smaller
 	int compare(char *received_key, char *received_nodeKey) {
 		char *key = received_key, *nodeKey = received_nodeKey;
@@ -63,19 +96,10 @@ public:
 		}
 		return 0;
 	}
-
-
-	Index(char* indexName){
-		fHandler = new FileHandler(indexName,'o');
-		header = (char *)malloc(BLOCK_SIZE);
-		fHandler->readBlock(0,header);
-		utils = new Utils();
-		utils->copyBytes(rootAddress,header,NODE_OFFSET_SIZE);
-		root = new TreeNode();
-		loadNode(root,rootAddress);
-		payloadlen= utils->getIntForBytes(&header[NODE_OFFSET_SIZE]);
-		keytype = utils->getKeyTypeForBytes(&header[NODE_OFFSET_SIZE+sizeof(payloadlen)]);
-	}
+/*
+ * This stores the node on the disk. If the offset passed is -1 node will be stored at the end of the file.
+ * This indicated newly added node.
+ */
 	int storeNode(TreeNode *node, long long int offset){
 		if(offset == -1)
 		{
@@ -96,7 +120,9 @@ public:
 		free(block);
 		return 0;
 		}
-
+/*
+ * This loads the node.We are using an in memory structure for node.Following function generates the node from the block read.
+ */
 	int loadNode(TreeNode *here,char *offset){
 		int position=0;
 		char *block = (char *)calloc(BLOCK_SIZE,BLOCK_SIZE);
@@ -111,7 +137,9 @@ public:
 		free(block);
 		return 0;
 	}
-
+/*
+ * Main insert function to insert the node in tree.
+ */
 	int insert(char key[], char payload[]){
 		if(root == 0)
 		{
@@ -152,7 +180,9 @@ public:
 		return 0;
 
 	}
-
+/*
+ * This is to handle first addition. First addition needs to update header of the file with nodes address
+ */
 	int addFirstElement(byte *key,byte *payload)
 	{
 		root = new TreeNode();
@@ -166,6 +196,9 @@ public:
 		storeNode(root,1);
         return 0;
 	}
+	/*
+	 * Get the next node to load
+	 */
 	int handleNonLeaf(TreeNode **rcvd_node, int position) {
 		TreeNode *node=*rcvd_node;
 		char *nextNodeAddress;
@@ -174,18 +207,29 @@ public:
 		loadNode(*rcvd_node,nextNodeAddress);
 		return 0;
 	}
-
+/*
+ * This inserts data in the non leaf node.Subsequntly splits the node if necessary and also adds necessary pointers to the parent
+ */
 	int handleLeaf(byte key[], byte payload[], TreeNode **rcvd_node, int position, char accessPath[][NODE_OFFSET_SIZE],int height) {
 		TreeNode *node=*rcvd_node;
 		if(splitNecessary(node->numkeys+1,node->flag) != 1)
 		{
+			/*
+			 * Added to this node.And no split
+			 */
 			node->addData(keytype,key,payloadlen,payload,position);
 			node->numkeys = node->numkeys + 1;
 			storeNode(node,utils->getIntForBytes(node->myaddr));
 		}
 		else
 		{
+			/*
+			 * Addition with split
+			 */
 			TreeNode *newLeaf = new TreeNode();
+			/*
+			 * Temporary space to hold the node that will result on addition of new data
+			 */
 			int tempSpaceSize = DATA_SIZE+payloadlen+keylen(&keytype);
 			char *tempSpace = (char*)calloc(tempSpaceSize,sizeof(char));
 
@@ -215,6 +259,9 @@ public:
 			newLeaf->flag = 'c';
 			newLeaf->numkeys = node->numkeys - n_by_two;
 			node->numkeys = n_by_two;
+			/*
+			 * Get the parent to add pointers to.accessPath has list of all nodes accessed till now.This array gives us the pareent
+			 */
 			TreeNode* parent = new TreeNode();
 			for(int i = 0 ; i < height ; i++)
 				if(strncmp(accessPath[i],(node->myaddr),NODE_OFFSET_SIZE) == 0){
@@ -240,6 +287,10 @@ public:
 		*rcvd_node=0;
 		return 0;
 	}
+	/*
+	 * This inserts pointers into node.May result in node split which is also handled.This results in recursive call to add pointers
+	 * to the parents up the tree till root
+	 */
 	int insertIntoParent(byte left[NODE_OFFSET_SIZE],byte key[],byte right[NODE_OFFSET_SIZE],byte parentOffset[NODE_OFFSET_SIZE],int height,char accessPath[][NODE_OFFSET_SIZE]){
 		if(strncmp(rootAddress,left,NODE_OFFSET_SIZE) == 0)
 		{
@@ -347,6 +398,10 @@ public:
 		}
 		return 0;
 	}
+	/*
+	 * To check if the split is necessary
+	 */
+
 	int splitNecessary(int numkeys,char type){
 		int allowedKeys;
 		if(type == 'c')
@@ -354,13 +409,14 @@ public:
 		else
 		{
 			allowedKeys = (DATA_SIZE)/((keylen(&keytype)+NODE_OFFSET_SIZE)+NODE_OFFSET_SIZE);
-//			allowedKeys --;
 		}
 		if(numkeys > allowedKeys)
 			return 1;
 		return 0;
 	}
-
+/*
+ * Lookup in tree
+ */
 	int lookup(char key[], char payload[]){
 		if(root == 0) {
 			printf("BPlus Tree empty.");
@@ -394,7 +450,9 @@ public:
 		return 1;
 	}
 };
-
+/*
+ * Test main function. Generate 10000 random numbers and lookup for the same.
+ */
 int main(){
 	KeyType keyType;
 	keyType.numAttrs=1;
@@ -470,4 +528,50 @@ int main(){
 //	index->lookup("1746",answer);
 //	printf("Found!! %s",answer);
 	return 0;
+}
+
+
+
+/*
+ * Functions to handle generation of composite keys.
+ */
+int getStringAttrVal(char *key, KeyType *keytype, int attrnum, char *retval){
+	if(attrnum > keytype->numAttrs || keytype->attrTypes[attrnum] != stringType)
+			return 0;
+	int i;
+	for(i = 0 ; i < attrnum ; i++ )
+		key = key + keytype->attrLen[i];
+	for(int j = 0 ; j < keytype->attrLen[i] ; j++)
+		retval[j] = *(key+j);
+	return 1;
+}
+
+int setStringAttrVal(char *key, KeyType *keytype, int attrnum, char *retval){
+	if(attrnum > keytype->numAttrs || keytype->attrTypes[attrnum] != stringType)
+		return 0;
+	int i;
+		for(i = 0 ; i < attrnum ; i++ )
+			key = key + keytype->attrLen[i];
+		for(int j = 0 ; j < keytype->attrLen[i] ; j++)
+			*(key+j) = retval[j];
+	return 1;
+}
+
+int getIntAttrVal(char *key, KeyType *keytype, int attrnum, int& retval){
+	if(attrnum > keytype->numAttrs || keytype->attrTypes[attrnum] != intType)
+			return 0;
+	for(int i = 0 ; i < attrnum ; i++ )
+			key = key + keytype->attrLen[i];
+	retval = *(int *)key;
+	return 1;
+
+}
+
+int setIntVal(char *key, KeyType *keytype, int attrnum, int val){
+	if(attrnum > keytype->numAttrs || keytype->attrTypes[attrnum] != intType)
+		return 0;
+	for(int i = 0 ; i < attrnum ; i++ )
+		key = key + keytype->attrLen[i];
+	*(int *)key = val;
+	return 1;
 }
